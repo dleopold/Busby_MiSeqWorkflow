@@ -1,0 +1,97 @@
+---
+title: "Analysis example"
+author: "DRL"
+date: "11/23/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    self_contained: true
+    highlight: zenburn
+---
+
+This is an example RMarkdown script demonstrating some *very* basic manipulation, visualization, and analysis of microbiome data stored as a phyloseq object. For more details on working with phyloseq objects, look at the phylose [tutorial pages](https://joey711.github.io/phyloseq/tutorials-index.html). This [microbiome workflow](https://bioconductor.org/help/course-materials/2017/BioC2017/Day1/Workshops/Microbiome/MicrobiomeWorkflowII.html) in R / Bioconductor tutorial is also worth checking out.
+
+```{r setup environment, warning=F, message=F}
+# Load packages
+library(tidyverse)
+library(magrittr)
+library(phyloseq)
+library(vegan)
+
+### Custom functions ###
+#remove empty OTUs
+sweepOTUs <- function(phy.in){
+  phy.in %>% prune_taxa(taxa_sums(.)>0, .)
+}
+#convert to relative abundance
+proportional <- function(phy.in){
+  phy.in %>% transform_sample_counts(function(x){x*min(sample_sums(.))/sum(x)})
+}
+
+# Import phyloseq object
+(phy <- readRDS("output/processing/compiled/phy.rds"))
+
+```
+
+## Quality control
+### Negative controls
+```{r negative controls}
+# Extract negative control samples (in this case samples with NA in the Samp_site column of the meta data)
+(negs <- phy %>% subset_samples(is.na(Samp_site)) %>% sweepOTUs)
+# There are only 4 taxa present in the negative controls with only a couple of reads each
+taxa_sums(negs)
+# OTU.1 and OTU.11 are likely cross talk 
+# OTU.412 and OTU.431 are only in the negative controls
+taxa_sums(phy)[taxa_names(negs)]
+# We can safely just remove the negative controls
+phy %<>% subset_samples(!is.na(Samp_site)) %>% sweepOTUs
+```
+****
+### Sequencing depth
+```{r sequencing depth}
+# Plot sequencing depth for each site
+sample_data(phy) %>% data.frame %>%
+  mutate(depth=sample_sums(phy)) %>%
+  ggplot(aes(x=Samp_site, y=depth)) +
+    ggbeeswarm::geom_quasirandom() +
+    geom_hline(yintercept = 1000, linetype = "dashed") 
+```
+
+Samples from site B did not sequence as well as samples form site A. This could be due to taxon bias, sample quality, or something else. This is not necessarily a problem, but should be kept in mind when interpreting differences between sites. Based on the plot, we will remove samples with < 1000 read from our analyses.
+```{r prune samples}
+(phy %<>% prune_samples(sample_sums(.)>1000, .))
+```
+****
+### OTU prevelance
+We will subset to only OTUs present in more than 20% of all samples.
+```{r}
+phy %>% filter_taxa(., function(x) {sum(x>0) > 0.02*nsamples(.)}, TRUE) 
+```
+****
+## Analysis
+### Ordination
+Visualize difference in community composition between sites using NMDS
+```{r}
+# Fit an NMDS ordination using Bray-Curtis dissimilarity of proportional abundance
+phy.ord <- phy %>% proportional %>% ordinate("NMDS","bray")
+plot.ord <- plot_ordination(phy,phy.ord,color="Samp_site") + ggthemes::theme_few()
+# Save image to file
+ggsave("output/figs/NMDS.pdf", plot.ord)
+plot.ord
+```
+
+### PerMANOVA
+Test the magnitude of the difference in community composition between sites 
+```{r}
+phy.dist <- phy %>% proportional %>% phyloseq::distance("bray")  
+adonis(phy.dist~sample_data(phy)$Samp_site)
+```
+
+Since the spread of the samples appeared to vary in the NMDS ordination, we can check betadispersion too.
+```{r betadispersion}
+phy.beta <- betadisper(phy.dist, sample_data(phy)$Samp_site)
+boxplot(phy.beta)
+permutest(phy.beta)
+```
+
