@@ -1,6 +1,4 @@
-output/processing
-output/figs
-output/UNITE
+output
 .Rproj.user
 .Rhistory
 README.html
