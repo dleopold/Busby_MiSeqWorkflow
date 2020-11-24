@@ -1,7 +1,7 @@
 ---
-title: "Analysis example"
-author: "DRL"
-date: "11/23/2020"
+title: "Microbiome analysis example"
+author: "Devin R Leopold"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
     toc: true
@@ -13,23 +13,23 @@ output:
 This is an example RMarkdown script demonstrating some *very* basic manipulation, visualization, and analysis of microbiome data stored as a phyloseq object. For more details on working with phyloseq objects, look at the phylose [tutorial pages](https://joey711.github.io/phyloseq/tutorials-index.html). This [microbiome workflow](https://bioconductor.org/help/course-materials/2017/BioC2017/Day1/Workshops/Microbiome/MicrobiomeWorkflowII.html) in R / Bioconductor tutorial is also worth checking out.
 
 ```{r setup environment, warning=F, message=F}
-# Load packages
+##### Load packages ####
 library(tidyverse)
 library(magrittr)
 library(phyloseq)
 library(vegan)
 
-### Custom functions ###
+#### Custom phyloseq functions ####
 #remove empty OTUs
 sweepOTUs <- function(phy.in){
   phy.in %>% prune_taxa(taxa_sums(.)>0, .)
 }
-#convert to relative abundance
+#convert to sequence counts to relative abundance
 proportional <- function(phy.in){
   phy.in %>% transform_sample_counts(function(x){x*min(sample_sums(.))/sum(x)})
 }
 
-# Import phyloseq object
+#### Import phyloseq object ####
 (phy <- readRDS("output/processing/compiled/phy.rds"))
 
 ```
@@ -66,7 +66,7 @@ Samples from site B did not sequence as well as samples form site A. This could 
 ### OTU prevelance
 We will subset to only OTUs present in more than 20% of all samples.
 ```{r}
-phy %>% filter_taxa(., function(x) {sum(x>0) > 0.02*nsamples(.)}, TRUE) 
+(phy %<>% filter_taxa(., function(x) {sum(x>0) > 0.02*nsamples(.)}, TRUE))
 ```
 ****
 ## Analysis

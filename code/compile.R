@@ -51,14 +51,14 @@ if(!file.exists("output/UNITE/UNITE.8.0.Alleuk.fasta.gz")){
   rm(eukDB)
 }
 
-# Run search with vsearch returning up to 5 matches
+# Run search with vsearch returning up to 3 matches
 vsearch.flags <- paste("--usearch_global output/scratch/seqs.fasta",
                        "--db output/UNITE/UNITE.8.0.Alleuk.fasta.gz",
                        "--id 0.65", "--strand both",
                        "--userout output/scratch/UNITEmatches.txt",
                        "--userfields query+target+id",
                        "--notmatched output/scratch/noMatch.fasta",
-                       "--maxhits 1",
+                       "--maxhits 3",
                        "--maxaccepts 500 --maxrejects 0"
 )
 system2("vsearch", args = vsearch.flags)
@@ -153,7 +153,7 @@ saveRDS(phy,"output/processing/compiled/phy.rds")
 
 # Save components for possible manual inspection
 otu_table(phy) %>% write.csv("output/processing/compiled/OTU.table.csv")
-tax_table(phy) %>% write.csv("output/processing/taxonomy.table.csv")
+tax_table(phy) %>% write.csv("output/processing/compiled/taxonomy.table.csv")
 
 # Remove scratch folder
 unlink("output/scratch", T)

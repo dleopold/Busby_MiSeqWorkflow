@@ -25,11 +25,11 @@ rc_fwd_primer="GCATATCAATAAGCGGAGGA"
 rev_primer="CAHCGATGAAGAACRYAG" #ITS3_kyo1
 rc_rev_primer="CTRYGTTCTTCATCGDTG"
 
-#Make empty file for collecting summary data during trimming.
+#Make empty file for collecting summary data during trimming (e.g., how many reads pass each step).
 log="${outDir}/summary.tab"
 echo -e "Sample\tRaw\tPrimer.trim\tReadThrough.trim" > ${log}
 
-#Find the sequencer from fastq header for counting 
+#Find the sequencer id from a fastq header for counting the number of sequences with grep 
 seqID=`pigz -dc $(find ${muxIn} -name "*R1.fastq.gz" | head -n1) | awk 'NR==1' | awk -F ":" '{print $1}'`
 
 #Loop over the forward reads (R1) in the demux folder.
